@@ -65,3 +65,11 @@ def create_google_tiles_lonlat(extent, level):
     x_min, y_min = lonlat_to_xy(lon_min, lat_min)
     x_max, y_max = lonlat_to_xy(lon_max, lat_max)
     return create_google_tiles_web((x_min, x_max, y_min, y_max), level)
+
+
+def lonlat_to_cell(lon, lat, level):
+    x, y = lonlat_to_xy(lon, lat)
+    col = web_to_index(x + FULL_WIDTH/2, level)
+    row = web_to_index(FULL_WIDTH/2 - y, level)
+    return col, row
+
