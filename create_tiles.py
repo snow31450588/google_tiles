@@ -3,30 +3,29 @@
 
 from pyproj import Proj
 
+HALF_WIDTH = 20037508.3427892
+FULL_WIDTH = HALF_WIDTH * 2
 proj_webmercator = Proj(init='epsg:3857')
 
+def lnglat_to_web(lng, lat):
+    x, y = proj_webmercator(lng, lat)
+    x += HALF_WIDTH
+    y = HALF_WIDTH - y
+    return x, y
 
-def lonlat_to_xy(lon, lat):
-    global proj_webmercator
-    return proj_webmercator(lon, lat)
-
-
-def xy_to_lonlat(x, y):
-    global proj_webmercator
+def web_to_lnglat(x, y):
+    x -= HALF_WIDTH
+    y = HALF_WIDTH - y
     return proj_webmercator(x, y, inverse=True)
 
-
-FULL_WIDTH = 20037508.3427892*2
-
-def web_to_index(web, level):
-    #web = FULL_WIDTH/2 - web
+def _web_to_index(level, web):
     level_span = FULL_WIDTH/(2**level)
     index = int(web/level_span)
     index = min(index, 2**level-1)
+    index = max(index, 0)
     return index
 
-
-def cell_to_extent(row, col, level):
+def cell_to_extent_web(level, col, row):
     level_span = FULL_WIDTH/(2**level)
     x_min = col*level_span
     x_max = (col+1)*level_span
@@ -34,42 +33,42 @@ def cell_to_extent(row, col, level):
     y_max = (row+1)*level_span
     return x_min, x_max, y_min, y_max
 
+def cell_to_extent_lnglat(level, col, row):
+    x_min, x_max, y_min, y_max = cell_to_extent_web(level, col, row)
+    lng_min, lat_min = web_to_lnglat(x_min, y_max)
+    lng_max, lat_max = web_to_lnglat(x_max, y_min)
+    return lng_min, lng_max, lat_min, lat_max
 
-def cell_to_extent_web(row, col, level):
-    level_span = FULL_WIDTH/(2**level)
-    x_min = col*level_span
-    x_max = (col+1)*level_span
-    y_min = row*level_span
-    y_max = (row+1)*level_span
-    return x_min - FULL_WIDTH/2, x_max - FULL_WIDTH/2, y_min - FULL_WIDTH/2, y_max - FULL_WIDTH/2
-
-
-def cell_to_extent_lonlat(row, col, level):
-    x_min, x_max, y_min, y_max = cell_to_extent(row, col, level)
-    lon_min, lat_min = xy_to_lonlat(x_min - FULL_WIDTH/2, FULL_WIDTH/2 - y_min)
-    lon_max, lat_max = xy_to_lonlat(x_max - FULL_WIDTH/2, FULL_WIDTH/2 - y_max)
-    return lon_min, lon_max, lat_max, lat_min
-
-
-def create_google_tiles_web(extent, level):
+def create_google_tiles_web(level, extent):
     x_min, x_max, y_min, y_max = extent
-    col_min = web_to_index(x_min + FULL_WIDTH/2, level)
-    col_max = web_to_index(x_max + FULL_WIDTH/2, level)
-    row_min = web_to_index(FULL_WIDTH/2-y_max, level)
-    row_max = web_to_index(FULL_WIDTH/2-y_min, level)
-    return [(col, row, cell_to_extent_lonlat(row,col,level)) for row in range(row_min,row_max+1) for col in range(col_min,col_max+1)]
+    col_min = _web_to_index(level, x_min)
+    col_max = _web_to_index(level, x_max)
+    row_min = _web_to_index(level, y_min)
+    row_max = _web_to_index(level, y_max)
+    return [(col, row, cell_to_extent_lnglat(level,col,row)) for row in range(row_min,row_max+1) for col in range(col_min,col_max+1)]
+
+def create_google_tiles_lnglat(level, extent):
+    lng_min, lng_max, lat_min, lat_max = extent
+    x_min, y_min = lnglat_to_web(lng_min, lat_max)
+    x_max, y_max = lnglat_to_web(lng_max, lat_min)
+    return create_google_tiles_web(level, (x_min, x_max, y_min, y_max))
 
 
-def create_google_tiles_lonlat(extent, level):
-    lon_min, lon_max, lat_min, lat_max = extent
-    x_min, y_min = lonlat_to_xy(lon_min, lat_min)
-    x_max, y_max = lonlat_to_xy(lon_max, lat_max)
-    return create_google_tiles_web((x_min, x_max, y_min, y_max), level)
-
-
-def lonlat_to_cell(lon, lat, level):
-    x, y = lonlat_to_xy(lon, lat)
-    col = web_to_index(x + FULL_WIDTH/2, level)
-    row = web_to_index(FULL_WIDTH/2 - y, level)
+def web_to_cell(x, y, level):
+    col = _web_to_index(level, x)
+    row = _web_to_index(level, y)
     return col, row
 
+def lnglat_to_cell(lng, lat, level):
+    x, y = lnglat_to_web(lng, lat)
+    return web_to_cell(x, y, level)
+
+def web_to_vertex(x, y, level, col, row):
+    x_min, x_max, y_min, y_max = cell_to_extent_web(row, col, level)
+    x *= 4096/(x_max-x_min)
+    y *= 4096/(y_max-y_min)
+    return int(x), int(y)
+
+def lnglat_to_vertex(lng, lat, level, col, row):
+    x, y = lnglat_to_web(lng, lat)
+    return web_to_vertex(x, y, level, col, row)
