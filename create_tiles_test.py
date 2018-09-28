@@ -213,7 +213,7 @@ class create_tiles_Test(unittest.TestCase):
         self.assertEqual(x, 4096)
         self.assertEqual(y, 4096)
 
-    def test_lnglat_to_vertex(self):
+    def test_lnglat_to_vertex_level0(self):
         x, y = create_tiles.lnglat_to_vertex(-180, LAT_MAX, 0, 0, 0)
         self.assertEqual(x, 0)
         self.assertEqual(y, 0)
@@ -223,6 +223,23 @@ class create_tiles_Test(unittest.TestCase):
         self.assertEqual(y, 2048)
 
         x, y = create_tiles.lnglat_to_vertex(180, -LAT_MAX, 0, 0, 0)
+        self.assertEqual(x, 4096)
+        self.assertEqual(y, 4096)
+
+    def test_lnglat_to_vertex_level1(self):
+        x, y = create_tiles.lnglat_to_vertex(-180, LAT_MAX, 1, 0, 0)
+        self.assertEqual(x, 0)
+        self.assertEqual(y, 0)
+
+        x, y = create_tiles.lnglat_to_vertex(0, 0, 1, 0, 0)
+        self.assertEqual(x, 4096)
+        self.assertEqual(y, 4096)
+
+        x, y = create_tiles.lnglat_to_vertex(0, 0, 1, 1, 1)
+        self.assertEqual(x, 0)
+        self.assertEqual(y, 0)
+
+        x, y = create_tiles.lnglat_to_vertex(180, -LAT_MAX, 1, 1, 1)
         self.assertEqual(x, 4096)
         self.assertEqual(y, 4096)
 

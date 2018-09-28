@@ -64,9 +64,9 @@ def lnglat_to_cell(lng, lat, level):
     return web_to_cell(x, y, level)
 
 def web_to_vertex(x, y, level, col, row):
-    x_min, x_max, y_min, y_max = cell_to_extent_web(row, col, level)
-    x *= 4096/(x_max-x_min)
-    y *= 4096/(y_max-y_min)
+    x_min, x_max, y_min, y_max = cell_to_extent_web(level, col, row)
+    x = (x-x_min) * 4096 / (x_max-x_min)
+    y = (y-y_min) * 4096 / (y_max-y_min)
     return int(x), int(y)
 
 def lnglat_to_vertex(lng, lat, level, col, row):
